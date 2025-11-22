@@ -215,7 +215,9 @@
             const locationName = data.location.replace(/,/g, '，'); 
             data.daily.forEach(day => {
                 const clothes = day.clothingAdvice.map(c => `[${c.category}] ${c.item} (${c.reason})`).join('<br/>');
-                const imgTag = day.generatedImage ? '(造型參考圖片)' : '(無圖片)';
+                const imgTag = day.generatedImage 
+                    ? `<img src="${day.generatedImage}" style="max-width:120px; max-height:120px; border-radius:12px;" />`
+                    : '(無圖片)';
                 tableRows += `<tr><td style="padding:10px">${day.date}</td><td style="padding:10px">${day.condition}</td><td style="padding:10px">${day.temperature}</td><td style="padding:10px; min-width: 250px;">${clothes}</td><td style="padding:10px; text-align: center;">${imgTag}</td></tr>`;
             });
             const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><h2>${locationName} - 寶寶出行穿搭指南 (${data.dateRange})</h2><table border="1" style="border-collapse: collapse; font-size: 10pt;"><thead><tr style="background:#f0f0f0; font-weight: bold;"><th style="padding:10px">日期</th><th style="padding:10px">天氣</th><th style="padding:10px">氣溫</th><th style="padding:10px; min-width: 250px;">穿搭建議 (品項/原因)</th><th style="padding:10px">造型參考</th></tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
@@ -371,7 +373,8 @@
                 }
                 
                 parsedData.sources = [];
-                // --- 台灣地名修正：若使用者輸入的地點屬於台灣，一律顯示為「使用者輸入地點，台灣」 ---
+                
+                // --- 台灣地名修正：若使用者輸入的地點屬於台灣，一律顯示為「使用者輸入地點，台灣」，並移除任何「中國/China」標示 ---
                 try {
                     const userQuery = (dest || "").trim();
                     const lower = userQuery.toLowerCase();
@@ -397,12 +400,28 @@
                     ];
 
                     const isTaiwan = taiwanKeywords.some(k => lower.includes(k.toLowerCase()));
-                    if (isTaiwan && userQuery) {
-                        parsedData.location = `${userQuery}，台灣`;
+                    if (isTaiwan) {
+                        if (userQuery) {
+                            parsedData.location = `${userQuery}，台灣`;
+                        } else if (parsedData.location) {
+                            // 若沒有使用者輸入字串，就至少把 AI 給的地名中的「中國 / China」清掉
+                            parsedData.location = parsedData.location
+                                .replace("中國", "台灣")
+                                .replace("China", "Taiwan");
+                        }
+                    } else if (parsedData.location) {
+                        // 非台灣地點，仍幫忙移除錯誤的「中國 / China」標籤
+                        const lowerLoc = parsedData.location.toLowerCase();
+                        if (lowerLoc.includes("taiwan")) {
+                            parsedData.location = parsedData.location
+                                .replace("中國", "台灣")
+                                .replace("China", "Taiwan");
+                        }
                     }
                 } catch (e) {
                     console.warn("台灣地名修正時發生錯誤，但不影響主要功能：", e);
                 }
+
  
                 if (result.response.candidates && result.response.candidates[0].groundingMetadata?.groundingChunks) {
                     parsedData.sources = result.response.candidates[0].groundingMetadata.groundingChunks.map(chunk => ({
@@ -473,10 +492,10 @@
             // 3. 如果 Gemini 有給 visualPrompt，就一起當作輔助描述
             const visualPrompt = (day.visualPrompt || "").trim();
 
-            // 4. 組合最終提示詞（明確要求衣物要畫出來）
+            // 4. 組合最終提示詞（改為日式清淡手繪水彩風）
             let prompt =
-                `Minimalist Japanese flat illustration, vector style. ` +
-                `A cute baby or toddler in ${locationTextRaw}，天氣為「${weatherText}」，氣溫 ${tempText}。`;
+                `Japanese light watercolor hand-drawn illustration, soft pastel colors, gentle lines. ` +
+                `一個可愛的寶寶或幼兒，位於「${locationTextRaw}」，天氣為「${weatherText}」，氣溫 ${tempText}。`;
 
             if (clothingSummary) {
                 prompt += ` 請務必清楚畫出以下穿搭重點：${clothingSummary}。`;
@@ -486,11 +505,11 @@
                 prompt += ` 參考這段穿搭氛圍描述：${visualPrompt}。`;
             }
 
-            prompt += ` 畫面需全身入鏡，構圖重點在衣服與配件，背景簡潔、柔和色系，無文字、無多餘物件。`;
+            prompt += ` 畫面需全身入鏡，重點在衣服與配件，背景簡潔柔和、偏日系清淡手繪風格，無文字、無多餘物件。`;
 
             const encodedPrompt = encodeURIComponent(prompt);
 
-            // 使用 Pollinations.ai 生成圖片（與原設定相同）
+            // 使用 Pollinations.ai 生成圖片
             const imageUrl =
                 `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
 
@@ -522,8 +541,7 @@
     });
 
     await Promise.all(imagePromises);
-}
-
+}\n
         // 渲染邏輯 (保持不變)
         function getCategoryIcon(cat) {
             const icons = { 'Head': '🧢', 'Outerwear': '🧥', 'Top': '👕', 'Bottom': '👖', 'Shoes': '👟', 'Accessories': '🧣' };
