@@ -429,32 +429,6 @@ Output JSON ONLY, no markdown, in EXACT shape:
             .join("");
 
           const imageArea = day.generatedImage
-  ? `
-    <div class="relative aspect-square w-full rounded-2xl bg-white border border-gray-50 overflow-hidden">
-      <img
-        src="${day.generatedImage}"
-        alt="Outfit for ${day.date || ""}"
-        class="w-full h-full object-cover opacity-0 transition-opacity duration-700"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        onload="this.style.opacity='1'; this.previousElementSibling.remove();"
-      />
-      <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-300 gap-2">
-        <div class="w-10 h-10 border-4 border-gray-200 border-t-accent-primary rounded-full animate-spin"></div>
-        <span class="text-xs">圖片生成中…</span>
-      </div>
-    </div>
-    <div class="text-center mt-3 hidden md:block">
-      <p class="text-[10px] text-gray-300 font-light tracking-[0.2em] uppercase">Daily Look (Pollinations)</p>
-    </div>
-  `
-  : `
-    <div class="aspect-square w-full rounded-2xl bg-white flex flex-col items-center justify-center border border-gray-50">
-      <span class="text-2xl">👶</span>
-      <span class="text-xs tracking-widest">NO IMAGE</span>
-    </div>
-  `;
-
             ? `
               <div class="aspect-square w-full rounded-2xl bg-white relative flex items-center justify-center border border-gray-50 overflow-hidden">
                 <img
