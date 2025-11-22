@@ -351,7 +351,7 @@
                 }
                 
                 // Step 3: Parse JSON and Handle Sources
-                const responseText = result.response.text;
+                const responseText = result.response.text();
                 let cleanedJsonString = responseText;
                 const jsonBlockMatch = responseText.match(/```json\s*(\{[\s\S]*\})\s*```/i);
                 if (jsonBlockMatch) cleanedJsonString = jsonBlockMatch[1];
