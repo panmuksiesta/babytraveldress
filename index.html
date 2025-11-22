@@ -8,9 +8,6 @@
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- html2canvas 用來把畫面存成圖片 -->
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
     <!-- 可愛字體 -->
     <link
       href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap"
@@ -36,7 +33,7 @@
       };
     </script>
 
-       <style>
+    <style>
       body {
         background-color: #fffbf0;
         color: #5d5d5d;
@@ -63,34 +60,7 @@
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
       }
-
-      /* ===== 匯出模式：白底 + 顏色補償 + 單欄排版 ===== */
-      #resultsCard.export-solid {
-        background-color: #ffffff !important;
-        box-shadow: none !important;
-        border-color: #e5e7eb !important;
-
-        /* 白底插畫補償：壓亮度、拉對比與飽和度 */
-        filter: brightness(0.85) contrast(3.6) saturate(2.8);
-      }
-
-      /* 匯出時：也同步加強圖片本身的顏色 */
-      #resultsCard.export-solid img {
-        filter: brightness(0.85) contrast(3.6) saturate(2.8);
-      }
-
-      /* 匯出時：強制所有 daily card 改為手機版直式排版 */
-      #resultsCard.export-solid .md\:flex-row {
-        flex-direction: column !important;
-      }
-
-      /* 匯出時：避免 overflow 把內容切掉 */
-      #resultsCard.export-solid,
-      #resultsCard.export-solid * {
-        overflow: visible !important;
-      }
     </style>
-
   </head>
 
   <body class="min-h-screen">
@@ -119,7 +89,6 @@
           </header>
 
           <!-- API Key 區塊 -->
-                    <!-- API Key 區塊 -->
           <section class="mb-6 p-4 rounded-2xl bg-rose-50/80 border border-rose-100 space-y-3">
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
@@ -177,7 +146,6 @@
               </div>
             </div>
           </section>
-
 
           <!-- 查詢表單 -->
           <form
@@ -237,15 +205,9 @@
             class="mt-6 hidden flex-col md:flex-row items-center justify-between gap-3 bg-white/70 border border-rose-100 rounded-2xl px-4 py-3"
           >
             <div class="text-xs text-gray-400">
-              <p>📸 可將上方整張卡片存成圖片，或匯出 Excel 詳細列表。</p>
+              <p>📊 可匯出 Excel 詳細列表（含每日天氣與穿搭建議）。</p>
             </div>
             <div class="flex gap-2">
-              <button
-                id="saveImageBtn"
-                class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition-colors text-sm font-bold"
-              >
-                📸 Save as Image
-              </button>
               <button
                 id="exportExcelBtn"
                 class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors text-sm font-bold"
@@ -427,7 +389,6 @@ Output JSON ONLY, no markdown, in EXACT shape:
       }
 
       // ========= 畫面渲染 =========
-      // ========= 畫面渲染（含圖片生成中的讀條） =========
       function renderResults(data) {
         const wrapper = document.getElementById("resultsWrapper");
         if (!data) {
@@ -544,7 +505,6 @@ Output JSON ONLY, no markdown, in EXACT shape:
         document.getElementById("exportBar").classList.remove("hidden");
       }
 
-
       async function generateAll(destination, startDate, endDate) {
         if (!currentApiKey) {
           alert("請先設定 Gemini API Key");
@@ -582,52 +542,7 @@ Output JSON ONLY, no markdown, in EXACT shape:
         }
       }
 
-           // ========= 匯出功能 =========
-      async function handleSaveImage() {
-        if (!currentResultData) {
-          alert("尚無可匯出的內容。");
-          return;
-        }
-
-        const card = document.getElementById("resultsCard");
-        if (!card) {
-          alert("找不到要匯出的內容區塊。");
-          return;
-        }
-        if (typeof html2canvas === "undefined") {
-          alert("html2canvas 尚未載入，無法匯出圖片。");
-          return;
-        }
-
-        // 匯出前：啟用匯出模式（實心白底、單欄排版、去掉 overflow）
-        card.classList.add("export-solid");
-
-        try {
-          const canvas = await html2canvas(card, {
-            backgroundColor: "#FFFFFF", // 實心白底
-            scale: 2,
-            useCORS: true,
-          });
-
-          const dataUrl = canvas.toDataURL("image/png");
-          const a = document.createElement("a");
-          const safeLocation = (currentResultData.location || "trip")
-            .replace(/[\s/\\]+/g, "-")
-            .toLowerCase();
-          a.href = dataUrl;
-          a.download = "babytravel-" + safeLocation + ".png";
-          a.click();
-        } catch (e) {
-          console.error(e);
-          alert("無法儲存圖片，請稍後再試。");
-        } finally {
-          // 匯出結束：還原畫面
-          card.classList.remove("export-solid");
-        }
-      }
-
-
-
+      // ========= 匯出 Excel =========
       function handleExportExcel() {
         if (!currentResultData) {
           alert("尚無可匯出的內容。");
@@ -733,8 +648,7 @@ Output JSON ONLY, no markdown, in EXACT shape:
           generateAll(destination, startDate, endDate);
         });
 
-        // 匯出按鈕
-        document.getElementById("saveImageBtn").addEventListener("click", handleSaveImage);
+        // 匯出按鈕（只剩 Excel）
         document.getElementById("exportExcelBtn").addEventListener("click", handleExportExcel);
       });
     </script>
