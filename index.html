@@ -61,13 +61,34 @@
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
       }
-        /* 匯出成圖片時使用的樣式：讓顏色更紮實一點、不那麼透明感 */
-  #resultsCard.export-solid {
-    background-color: #ffffff !important;
-    box-shadow: none !important;
-    border-color: #e5e7eb !important;
-    filter: contrast(1.1) saturate(1.15);
-  }
+      .animate-fade-in {
+        animation: fadeIn 0.6s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* ===== 匯出模式：讓顏色更紮實 + 強制單欄排版（避免桌機版被切掉） ===== */
+      #resultsCard.export-solid {
+        background-color: #ffffff !important;
+        box-shadow: none !important;
+        border-color: #e5e7eb !important;
+        filter: contrast(1.15) saturate(1.2);
+      }
+
+      /* 匯出時：強制讓所有 daily card 改為手機版的直式排版 */
+      #resultsCard.export-solid .md\:flex-row {
+        flex-direction: column !important;
+      }
+
+      /* 匯出時：避免任何 overflow 導致被截斷 */
+      #resultsCard.export-solid,
+      #resultsCard.export-solid * {
+        overflow: visible !important;
+      }
+
+}
 
     </style>
   </head>
@@ -561,15 +582,15 @@ Output JSON ONLY, no markdown, in EXACT shape:
         }
       }
 
-      // ========= 匯出功能 =========
-            async function handleSaveImage() {
+           // ========= 匯出功能 =========
+      async function handleSaveImage() {
         if (!currentResultData) {
           alert("尚無可匯出的內容。");
           return;
         }
 
-        const container = document.getElementById("resultsCard");
-        if (!container) {
+        const card = document.getElementById("resultsCard");
+        if (!card) {
           alert("找不到要匯出的內容區塊。");
           return;
         }
@@ -578,14 +599,12 @@ Output JSON ONLY, no markdown, in EXACT shape:
           return;
         }
 
-        // ① 匯出前先加上一個「實心匯出模式」，讓背景更實、更有對比
-        container.classList.add("export-solid");
+        // 匯出前：啟用匯出模式（實心白底、單欄排版、去掉 overflow）
+        card.classList.add("export-solid");
 
         try {
-          const canvas = await html2canvas(container, {
-            // 匯出時用純白背景，比淡奶油色更不容易看起來「漂掉」
-            backgroundColor: "#FFFFFF",
-            // 讓文字＆圖片更清楚
+          const canvas = await html2canvas(card, {
+            backgroundColor: "#FFFFFF", // 實心白底
             scale: 2,
             useCORS: true,
           });
@@ -602,10 +621,11 @@ Output JSON ONLY, no markdown, in EXACT shape:
           console.error(e);
           alert("無法儲存圖片，請稍後再試。");
         } finally {
-          // ② 匯出完，把實心模式拿掉，畫面回復正常
-          container.classList.remove("export-solid");
+          // 匯出結束：還原畫面
+          card.classList.remove("export-solid");
         }
       }
+
 
 
       function handleExportExcel() {
