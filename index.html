@@ -36,12 +36,13 @@
       };
     </script>
 
-    <style>
+       <style>
       body {
         background-color: #fffbf0;
         color: #5d5d5d;
         font-family: "Zen Maru Gothic", "Fredoka", system-ui, sans-serif;
       }
+
       ::-webkit-scrollbar {
         width: 8px;
       }
@@ -54,6 +55,7 @@
         border: 3px solid transparent;
         background-clip: content-box;
       }
+
       .animate-fade-in {
         animation: fadeIn 0.6s ease-out forwards;
       }
@@ -61,50 +63,34 @@
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
       }
-      .animate-fade-in {
-        animation: fadeIn 0.6s ease-out forwards;
+
+      /* ===== 匯出模式：白底 + 顏色補償 + 單欄排版 ===== */
+      #resultsCard.export-solid {
+        background-color: #ffffff !important;
+        box-shadow: none !important;
+        border-color: #e5e7eb !important;
+
+        /* 白底插畫補償：壓亮度、拉對比與飽和度 */
+        filter: brightness(0.85) contrast(3.6) saturate(2.8);
       }
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
 
-      /* ===== 匯出模式：讓顏色更紮實 + 強制單欄排版（避免桌機版被切掉） ===== */
-/* 匯出模式：強化顏色（加強版） */
-#resultsCard.export-solid {
-  background-color: #ffffff !important;
-  box-shadow: none !important;
-  border-color: #e5e7eb !important;
-
-  /* 大幅加深顏色 */
-  filter: brightness(0.90) contrast(3.0) saturate(3.0);
-}
-
-/* 匯出時：也加強圖片本身 */
-#resultsCard.export-solid img {
-  filter: brightness(0.90) contrast(3.0) saturate(3.0);
-}
-
-
-      /* 匯出時：加強寶寶插圖本身的顏色與對比 */
+      /* 匯出時：也同步加強圖片本身的顏色 */
       #resultsCard.export-solid img {
-        filter: brightness(0.95) contrast(1.6) saturate(1.8);
+        filter: brightness(0.85) contrast(3.6) saturate(2.8);
       }
 
-      /* 匯出時：強制讓所有 daily card 改為手機版的直式排版 */
+      /* 匯出時：強制所有 daily card 改為手機版直式排版 */
       #resultsCard.export-solid .md\:flex-row {
         flex-direction: column !important;
       }
 
-      /* 匯出時：避免任何 overflow 導致被截斷 */
+      /* 匯出時：避免 overflow 把內容切掉 */
       #resultsCard.export-solid,
       #resultsCard.export-solid * {
         overflow: visible !important;
       }
-
-}
-
     </style>
+
   </head>
 
   <body class="min-h-screen">
