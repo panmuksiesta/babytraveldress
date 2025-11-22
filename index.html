@@ -370,7 +370,40 @@
                     throw new Error(`AI 返回的內容無法解析為 JSON 格式。`);
                 }
                 
-                parsedData.sources = []; 
+                parsedData.sources = [];
+                // --- 台灣地名修正：若使用者輸入的地點屬於台灣，一律顯示為「使用者輸入地點，台灣」 ---
+                try {
+                    const userQuery = (dest || "").trim();
+                    const lower = userQuery.toLowerCase();
+                    const taiwanKeywords = [
+                        "台灣","臺灣","taiwan",
+                        "台北","臺北","taipei",
+                        "新北","new taipei",
+                        "桃園","taoyuan",
+                        "台中","臺中","taichung",
+                        "台南","臺南","tainan",
+                        "高雄","kaohsiung",
+                        "基隆","keelung",
+                        "新竹","hsinchu",
+                        "嘉義","chiayi",
+                        "苗栗","miaoli",
+                        "宜蘭","yilan",
+                        "花蓮","hualien",
+                        "台東","臺東","taitung",
+                        "屏東","pingtung",
+                        "澎湖","penghu",
+                        "金門","kinmen",
+                        "馬祖","matsu"
+                    ];
+
+                    const isTaiwan = taiwanKeywords.some(k => lower.includes(k.toLowerCase()));
+                    if (isTaiwan && userQuery) {
+                        parsedData.location = `${userQuery}，台灣`;
+                    }
+                } catch (e) {
+                    console.warn("台灣地名修正時發生錯誤，但不影響主要功能：", e);
+                }
+ 
                 if (result.response.candidates && result.response.candidates[0].groundingMetadata?.groundingChunks) {
                     parsedData.sources = result.response.candidates[0].groundingMetadata.groundingChunks.map(chunk => ({
                       title: chunk.web.title,
@@ -417,26 +450,47 @@
 
         // 圖片生成邏輯 (已修正為 Pollinations.ai，避免 ai.models 錯誤)
         async function generateImages(data) {
-    const imagePromises = data.daily.map((day, i) => {
+    const imagePromises = (data.daily || []).map((day, i) => {
         return new Promise((resolve) => {
             const containerId = `img-container-${i}`;
 
-            const clothingSummary = Array.isArray(day.clothingAdvice)
-                ? day.clothingAdvice.map(c => `${c.item}`).join(', ')
-                : '';
+            // 1. 組合穿搭摘要（含類別）
+            let clothingSummary = "";
+            if (Array.isArray(day.clothingAdvice) && day.clothingAdvice.length > 0) {
+                const parts = day.clothingAdvice.map(c => {
+                    const cat = c.category ? `[${c.category}]` : "";
+                    const item = c.item || "";
+                    return `${cat}${item}`.trim();
+                }).filter(Boolean);
+                clothingSummary = parts.join("、");
+            }
 
-            const weatherText = day.weatherDescription || '';
-            const tempText = day.tempRange || '';
-            const locationText = (data.location || '').replace(/,/g, '，');
+            // 2. 取用天氣資訊與溫度（對應 JSON schema: condition / temperature）
+            const weatherText = day.condition || "";
+            const tempText = day.temperature || "";
+            const locationTextRaw = (data.location || "").replace(/,/g, "，");
 
-            const prompt =
+            // 3. 如果 Gemini 有給 visualPrompt，就一起當作輔助描述
+            const visualPrompt = (day.visualPrompt || "").trim();
+
+            // 4. 組合最終提示詞（明確要求衣物要畫出來）
+            let prompt =
                 `Minimalist Japanese flat illustration, vector style. ` +
-                `A cute baby or toddler in ${locationText}, dressed appropriately for ${weatherText}天氣，氣溫${tempText}。` +
-                (clothingSummary ? ` Outfit items: ${clothingSummary}。` : '') +
-                ` Soft pastel colors, clean simple background, full body view, focus on the outfit, no text, no extra objects.`;
+                `A cute baby or toddler in ${locationTextRaw}，天氣為「${weatherText}」，氣溫 ${tempText}。`;
+
+            if (clothingSummary) {
+                prompt += ` 請務必清楚畫出以下穿搭重點：${clothingSummary}。`;
+            }
+
+            if (visualPrompt) {
+                prompt += ` 參考這段穿搭氛圍描述：${visualPrompt}。`;
+            }
+
+            prompt += ` 畫面需全身入鏡，構圖重點在衣服與配件，背景簡潔、柔和色系，無文字、無多餘物件。`;
 
             const encodedPrompt = encodeURIComponent(prompt);
 
+            // 使用 Pollinations.ai 生成圖片（與原設定相同）
             const imageUrl =
                 `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
 
@@ -450,8 +504,9 @@
                 if (container) {
                     container.innerHTML = "";
                     container.appendChild(img);
+                    if (!data.daily[i]) data.daily[i] = day;
+                    data.daily[i].generatedImage = imageUrl;
                 }
-                day.generatedImage = imageUrl;
                 resolve();
             };
 
@@ -459,7 +514,7 @@
                 const container = document.getElementById(containerId);
                 if (container) {
                     container.innerHTML =
-                        '<div class="text-xs text-red-400 p-4 text-center">繪圖失敗，請重新整理重試</div>';
+                        '<div class="w-full h-full flex items-center justify-center text-xs text-red-400 p-4 text-center">繪圖失敗，請重新整理重試</div>';
                 }
                 resolve();
             };
