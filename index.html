@@ -7,6 +7,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- 透過 ES module 載入 Gemini JS SDK，並掛到 window.GoogleGenerativeAI -->
     <script type="module">
       import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
       window.GoogleGenerativeAI = GoogleGenerativeAI;
@@ -25,10 +26,11 @@
 </head>
 <body class="min-h-screen pb-32 px-4 sm:px-6 lg:px-8 text-gray-700">
 
+    <!-- API Key 輸入 Modal -->
     <div id="apiKeyModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
         <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4 animate-fade-in">
             <h2 class="text-2xl font-bold mb-4 text-center text-gray-800">歡迎使用 BabyTravel</h2>
-            <p class="text-gray-500 mb-6 text-sm text-center">本工具需要 **Gemini Key** (AI 服務)。</p>
+            <p class="text-gray-500 mb-6 text-sm text-center">本工具需要 Gemini API Key。</p>
             
             <input type="password" id="geminiApiKeyInput" placeholder="貼上您的 Gemini API Key" 
                 class="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-gray-200 mb-4 outline-none focus:ring-2 focus:ring-blue-100">
@@ -41,21 +43,24 @@
 
             <div class="mt-4 text-center text-xs space-y-2">
                 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-400 underline block font-bold">
-                    取得 Gemini Key (請在 Google AI Studio 頁面建立)
+                    取得 Gemini Key（請在 Google AI Studio 建立 Browser 用的 Key）
                 </a>
             </div>
         </div>
     </div>
 
+    <!-- 重設 Key 按鈕 -->
     <div class="absolute top-4 right-4"> 
         <button id="resetKeyBtn" onclick="clearApiKeys()" class="text-xs text-gray-400 hover:text-gray-600 underline transition-colors hidden">重設 Gemini Key</button>
     </div>
 
+    <!-- Header -->
     <header class="pt-12 pb-8 text-center">
         <h1 class="text-4xl md:text-5xl font-bold text-gray-700 mb-2 tracking-wide">BabyTravel</h1>
-        <p class="text-gray-500 text-sm tracking-widest uppercase">Minimalist Travel Weather & Style Guide</p>
+        <p class="text-gray-500 text-sm tracking-widest uppercase">Minimalist Travel Weather &amp; Style Guide</p>
     </header>
 
+    <!-- 搜尋表單 -->
     <main class="max-w-4xl mx-auto mb-12">
         <form id="searchForm" class="bg-white p-2 md:p-4 rounded-[2rem] shadow-sm border border-gray-200 flex flex-col md:flex-row gap-2">
             <div class="flex-grow">
@@ -71,6 +76,7 @@
         </form>
     </main>
 
+    <!-- 載入中顯示 -->
     <div id="loadingDisplay" class="hidden flex-col items-center justify-center py-12 space-y-6 animate-fade-in">
         <div class="relative">
             <div class="w-24 h-24 bg-yellow-200 rounded-full animate-bounce flex items-center justify-center shadow-lg shadow-yellow-100">
@@ -82,20 +88,32 @@
         <h3 id="loadingText" class="text-xl font-bold text-gray-600 tracking-widest text-center">分析天氣與穿搭...</h3>
     </div>
 
+    <!-- 錯誤顯示 -->
     <div id="errorDisplay" class="max-w-xl mx-auto hidden bg-red-50 border border-red-200 p-6 rounded-2xl animate-fade-in my-12">
         <h3 class="text-lg font-bold text-red-700 mb-2">發生錯誤</h3>
-        <p id="errorText" class="text-sm text-red-600"></p>
-        <p class="text-xs text-red-400 mt-4">請嘗試：<br>1. 檢查地點/日期是否有誤。<br>2. **按右上角重設 Key**，重新輸入您的 Gemini API Key。<br>3. 檢查您的網路連線。</p>
+        <p id="errorText" class="text-sm text-red-600 whitespace-pre-line"></p>
+        <p class="text-xs text-red-400 mt-4">
+            請嘗試：<br>
+            1. 檢查地點/日期是否有誤。<br>
+            2. 按右上角「重設 Key」，重新輸入您的 Gemini API Key。<br>
+            3. 檢查您的網路連線，或稍後再試。
+        </p>
     </div>
 
+    <!-- 結果區 -->
     <div id="resultContainer" class="container mx-auto hidden animate-fade-in space-y-4">
         <div id="weatherCard" class="w-full max-w-5xl mx-auto bg-[#FFFBF0] p-4 rounded-3xl"></div>
     </div>
 
+    <!-- 匯出工具列 -->
     <div id="exportBar" class="fixed bottom-6 left-0 right-0 flex justify-center items-center pointer-events-none z-40 hidden">
         <div class="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg border border-gray-200 pointer-events-auto flex gap-2 transform hover:scale-105 transition-transform">
-            <button onclick="exportImage()" id="btnExportImg" class="flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition-colors font-bold text-sm">📸 儲存圖片</button>
-            <button onclick="exportExcel()" class="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-500 transition-colors font-bold text-sm">📊 匯出 Excel</button>
+            <button onclick="exportImage()" id="btnExportImg" class="flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition-colors font-bold text-sm">
+                📸 儲存圖片
+            </button>
+            <button onclick="exportExcel()" class="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-500 transition-colors font-bold text-sm">
+                📊 匯出 Excel
+            </button>
         </div>
     </div>
 
@@ -103,9 +121,11 @@
         <p>Gemini AI Powered</p>
     </footer>
 
+    <!-- 第一段 script：全域狀態 & 匯出功能 -->
     <script>
         window.currentWeatherData = null;
-        let genAI = null; // 全域變數，延遲初始化
+        let genAI = null; // 全域 Gemini client
+
         const FIXED_OPEN_WEATHER_MAP_KEY = "aec895af7d1fad1bcef7671a192d311a"; 
         const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/forecast";
 
@@ -119,11 +139,10 @@
         window.saveApiKeys = () => {
             const geminiInput = document.getElementById('geminiApiKeyInput').value.trim();
             if (!geminiInput) return alert("請輸入您的 Gemini API Key");
-            // 由於 Gemini Key 格式通常是 AIza...，我們可以進行一個基本檢查
             if (!geminiInput.startsWith("AIza")) {
-                 if (!confirm("您輸入的 Key 似乎不是以 'AIza' 開頭的 Gemini API Key。請問是否確認繼續使用？")) {
-                    return; // 如果使用者取消，則不儲存
-                 }
+                if (!confirm("您輸入的 Key 似乎不是以 'AIza' 開頭的 Gemini API Key。確定要繼續使用嗎？")) {
+                    return;
+                }
             }
             localStorage.setItem("gemini_api_key", geminiInput);
             location.reload(); 
@@ -154,27 +173,31 @@
             const exportBar = document.getElementById('exportBar');
             
             if (isLoading) {
-                loader.classList.remove('hidden'); loader.classList.add('flex');
+                loader.classList.remove('hidden'); 
+                loader.classList.add('flex');
                 result.classList.add('hidden');
                 exportBar.classList.add('hidden');
                 setError(false); 
                 document.getElementById('loadingText').innerText = text;
-                btn.disabled = true; btn.innerText = text.includes('繪製') ? '繪製中...' : '分析中...';
+                btn.disabled = true; 
+                btn.innerText = text.includes('繪製') ? '繪製中...' : '分析中...';
             } else {
-                loader.classList.add('hidden'); loader.classList.remove('flex');
-                btn.disabled = false; btn.innerText = "Go";
+                loader.classList.add('hidden'); 
+                loader.classList.remove('flex');
+                btn.disabled = false; 
+                btn.innerText = "Go";
                 
                 if (document.getElementById('errorDisplay').classList.contains('hidden')) {
-                     result.classList.remove('hidden');
+                    result.classList.remove('hidden');
                 }
             }
         }
 
-        // 5. 匯出圖片功能 
+        // 5. 匯出整頁圖片
         window.exportImage = async () => { 
             if (typeof window.html2canvas === 'undefined' || !window.currentWeatherData) {
-                 alert("資料尚未載入或截圖工具未準備好。");
-                 return;
+                alert("資料尚未載入或截圖工具未準備好。");
+                return;
             }
             
             const data = window.currentWeatherData;
@@ -198,7 +221,9 @@
                 element.style.backgroundColor = originalBg;
 
                 const link = document.createElement('a');
-                link.download = `BabyTravel-${data.location}-${data.dateRange}.png`;
+                const safeLocation = (data.location || 'BabyTravel').replace(/[\\/:*?"<>|]/g, '_');
+                const safeRange = (data.dateRange || '').replace(/[\\/:*?"<>|]/g, '_');
+                link.download = `BabyTravel-${safeLocation}-${safeRange}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             } catch (err) { 
@@ -209,8 +234,7 @@
             btn.disabled = false;
         };
 
-
-        // 匯出單日卡片圖片
+        // 6. 匯出單日卡片圖片
         window.exportDayImage = async (idx) => {
             if (typeof window.html2canvas === 'undefined' || !window.currentWeatherData) {
                 alert("資料尚未載入或截圖工具未準備好。");
@@ -233,7 +257,9 @@
                 });
                 const link = document.createElement('a');
                 const safeLocation = (data.location || 'BabyTravel').replace(/[\\/:*?"<>|]/g, '_');
-                const dayLabel = (data.daily[idx] && data.daily[idx].date) ? data.daily[idx].date.replace(/[\\/:*?"<>|]/g, '_') : `day${idx + 1}`;
+                const dayLabel = (data.daily[idx] && data.daily[idx].date)
+                    ? data.daily[idx].date.replace(/[\\/:*?"<>|]/g, '_')
+                    : `day${idx + 1}`;
                 link.download = `BabyTravel-${safeLocation}-${dayLabel}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
@@ -245,18 +271,50 @@
             }
         };
 
-        // 6. 匯出 Excel 功能 (保持不變)
+        // 7. 匯出 Excel
         window.exportExcel = () => { 
             const data = window.currentWeatherData;
             if (!data) return;
             let tableRows = '';
-            const locationName = data.location.replace(/,/g, '，'); 
+            const locationName = (data.location || '').replace(/,/g, '，'); 
+
             data.daily.forEach(day => {
-                const clothes = day.clothingAdvice.map(c => `[${c.category}] ${c.item} (${c.reason})`).join('<br/>');
-                const imgTag = day.generatedImage ? `<img src="${day.generatedImage}" style="max-width:120px; max-height:120px; border-radius:12px;" />` : '(無圖片)';
-                tableRows += `<tr><td style="padding:10px">${day.date}</td><td style="padding:10px">${day.condition}</td><td style="padding:10px">${day.temperature}</td><td style="padding:10px; min-width: 250px;">${clothes}</td><td style="padding:10px; text-align: center;">${imgTag}</td></tr>`;
+                const clothes = (day.clothingAdvice || [])
+                    .map(c => `[${c.category}] ${c.item} (${c.reason})`)
+                    .join('<br/>');
+                const imgTag = day.generatedImage
+                    ? `<img src="${day.generatedImage}" style="max-width:120px; max-height:120px; border-radius:12px;" />`
+                    : '(無圖片)';
+                tableRows += `
+                    <tr>
+                        <td style="padding:10px">${day.date}</td>
+                        <td style="padding:10px">${day.condition}</td>
+                        <td style="padding:10px">${day.temperature}</td>
+                        <td style="padding:10px; min-width: 250px;">${clothes}</td>
+                        <td style="padding:10px; text-align: center;">${imgTag}</td>
+                    </tr>`;
             });
-            const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><h2>${locationName} - 寶寶出行穿搭指南 (${data.dateRange})</h2><table border="1" style="border-collapse: collapse; font-size: 10pt;"><thead><tr style="background:#f0f0f0; font-weight: bold;"><th style="padding:10px">日期</th><th style="padding:10px">天氣</th><th style="padding:10px">氣溫</th><th style="padding:10px; min-width: 250px;">穿搭建議 (品項/原因)</th><th style="padding:10px">造型參考</th></tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
+
+            const html = `
+                <html xmlns:x="urn:schemas-microsoft-com:office:excel">
+                <head><meta charset="UTF-8"></head>
+                <body>
+                    <h2>${locationName} - 寶寶出行穿搭指南 (${data.dateRange})</h2>
+                    <table border="1" style="border-collapse: collapse; font-size: 10pt;">
+                        <thead>
+                            <tr style="background:#f0f0f0; font-weight: bold;">
+                                <th style="padding:10px">日期</th>
+                                <th style="padding:10px">天氣</th>
+                                <th style="padding:10px">氣溫</th>
+                                <th style="padding:10px; min-width: 250px;">穿搭建議 (品項/原因)</th>
+                                <th style="padding:10px">造型參考</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </body>
+                </html>`;
+
             const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -267,13 +325,12 @@
         };
     </script>
 
-
+    <!-- 第二段 script：天氣 + Gemini 邏輯 -->
     <script>
-        // 獲取天氣數據 (OpenWeatherMap)
+        // OpenWeatherMap：先 geocoding 再 forecast
         const fetchWeather = async (destination) => {
             const owmKey = FIXED_OPEN_WEATHER_MAP_KEY;
             
-            // Step 1a: Geocoding
             const geocodingUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(destination)}&limit=1&appid=${owmKey}`;
             const geoResponse = await fetch(geocodingUrl);
             if (!geoResponse.ok) throw new Error("網路連線失敗或地理編碼服務無法使用。");
@@ -283,7 +340,6 @@
 
             const { lat, lon, name, country } = geoData[0];
 
-            // Step 1b: Fetch forecast
             const weatherUrl = `${WEATHER_API_URL}?lat=${lat}&lon=${lon}&units=metric&lang=zh_tw&appid=${owmKey}`;
             const weatherResponse = await fetch(weatherUrl);
             if (!weatherResponse.ok) throw new Error("無法從 OpenWeatherMap 獲取天氣數據。");
@@ -292,11 +348,8 @@
             return { name, country, data: weatherData };
         };
 
-
-        // 核心邏輯 (Search Form 提交處理函數)
-        
         /**
-         * 將 Gemini / 天氣 / JSON 等錯誤轉成容易理解的人話
+         * 將 Gemini / 天氣 / JSON 等錯誤轉成人類可讀訊息
          */
         function formatGeminiError(error) {
             let raw = "";
@@ -316,7 +369,6 @@
             let human = "分析失敗，請檢查地點、日期或您的 Gemini API Key。";
             const lower = raw.toLowerCase();
 
-            // ---- Gemini API 常見錯誤分類 ----
             if (raw.includes("401")) {
                 human = "Gemini 錯誤：401（API Key 無效、被撤銷或填錯）。";
             } 
@@ -339,22 +391,20 @@
             return { human, raw };
         }
 
-async function handleSearchSubmit(e) {
+        // 主要流程：處理表單送出
+        async function handleSearchSubmit(e) {
             e.preventDefault(); 
             
-            // 檢查 Key 
             const geminiKey = localStorage.getItem("gemini_api_key");
             if (!geminiKey) {
-                 // 如果沒有 Key，強制彈出輸入框
-                 document.getElementById('apiKeyModal').classList.remove('hidden');
-                 setError(true, "請先輸入您的 Gemini API Key。");
-                 return; 
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                setError(true, "請先輸入您的 Gemini API Key。");
+                return; 
             }
 
             // 延遲初始化 Gemini
             if (!genAI) {
                 try {
-                    // --- 確保正確初始化 Gemini 構造函數 ---
                     let AiConstructor = window.GoogleGenerativeAI; 
                     
                     if (AiConstructor && typeof AiConstructor === 'object' && AiConstructor.GoogleGenerativeAI) {
@@ -362,18 +412,15 @@ async function handleSearchSubmit(e) {
                     }
 
                     if (typeof AiConstructor !== 'function') {
-                        throw new Error("Gemini SDK 載入失敗。請檢查 client.js 檔案是否與 index.html 在同一位置。");
+                        throw new Error("Gemini SDK 載入失敗。請確認頁面上方的 ES module script 是否有成功載入。");
                     }
-                    
-                    // 這一步可能會因為網路問題 ('Failed to fetch') 失敗
+
                     genAI = new AiConstructor(geminiKey);
-                    // --- 修正區域結束 ---
                 } catch (e) {
-                    setError(true, `Gemini API Client 初始化失敗。請確認 Key 有效性。詳細訊息: ${e.message}`);
+                    setError(true, `Gemini Client 初始化失敗。請確認 Key 有效性或稍後再試。\n\n【技術訊息】\n${e.message}`);
                     return; 
                 }
             }
-
 
             const dest = document.getElementById('destination').value;
             const start = document.getElementById('startDate').value;
@@ -383,78 +430,81 @@ async function handleSearchSubmit(e) {
             setLoading(true, "正在向 OpenWeatherMap 獲取天氣數據...");
 
             try {
-                // Step 1: Fetch Weather Data
+                // Step 1: 取得天氣
                 const rawWeatherData = await fetchWeather(dest);
                 const weatherDataJson = JSON.stringify(rawWeatherData.data);
 
                 setLoading(true, "正在分析天氣並生成穿搭建議...");
 
-                // Step 2: Call Gemini
-                // 關鍵修正：確保使用正確的模型名稱 gemini-2.5-flash
+                // Step 2: 呼叫 Gemini
+                if (!genAI) {
+                    throw new Error("Gemini SDK 尚未成功初始化（genAI 為 null）。請重設 Key 或重新整理頁面後再試。");
+                }
+
                 const model = genAI.getGenerativeModel({ 
-                    model: "gemini-2.5-flash", 
-                    config: { tools: [{ googleSearch: {} }] } 
+                    model: "gemini-2.5-flash"
                 }); 
 
                 const prompt = `
-                    Based on the following raw OpenWeatherMap 5-day / 3-hour weather forecast data for ${rawWeatherData.name}, ${rawWeatherData.country}, from ${start} to ${end}:
-                    
-                    <WEATHER_DATA>
-                    ${weatherDataJson}
-                    </WEATHER_DATA>
-                    
-                    1. Filter the data to select the most representative forecast entry (e.g., around 12 PM or the daily max/min) for EACH day in the range.
-                    2. Based on the temperature and condition for EACH DAY, create a detailed, protective clothing list for a baby/toddler.
-                    3. Return a VALID JSON object. Do not return markdown code blocks.
-                    4. Ensure the output data is fully in Traditional Chinese (繁體中文) where specified in the schema.
+Based on the following raw OpenWeatherMap 5-day / 3-hour weather forecast data for ${rawWeatherData.name}, ${rawWeatherData.country}, from ${start} to ${end}:
 
-                    The output JSON MUST match this schema:
-                    {
-                      "location": "City Name, Country (Traditional Chinese)",
-                      "dateRange": "YYYY/MM/DD - YYYY/MM/DD",
-                      "daily": [
-                        {
-                          "date": "MM/DD (Day)",
-                          "temperature": "Range (e.g. 15°C - 20°C)",
-                          "condition": "Condition (e.g. 晴時多雲)",
-                          "clothingAdvice": [
-                            { "category": "Head", "item": "...", "reason": "..." },
-                            // ... other items
-                          ],
-                          "visualPrompt": "A minimalist description of the baby's outfit for THIS specific day based on the weather. Focus on key items. Keep it short."
-                        }
-                      ]
-                    }
+<WEATHER_DATA>
+${weatherDataJson}
+</WEATHER_DATA>
+
+1. Filter the data to select the most representative forecast entry (e.g., around 12 PM or the daily max/min) for EACH day in the range.
+2. Based on the temperature and condition for EACH DAY, create a detailed, protective clothing list for a baby/toddler.
+3. Return a VALID JSON object. Do not return markdown code blocks.
+4. Ensure the output data is fully in Traditional Chinese (繁體中文) where specified in the schema.
+
+The output JSON MUST match this schema:
+{
+  "location": "City Name, Country (Traditional Chinese)",
+  "dateRange": "YYYY/MM/DD - YYYY/MM/DD",
+  "daily": [
+    {
+      "date": "MM/DD (Day)",
+      "temperature": "Range (e.g. 15°C - 20°C)",
+      "condition": "Condition (e.g. 晴時多雲)",
+      "clothingAdvice": [
+        { "category": "Head", "item": "...", "reason": "..." }
+      ],
+      "visualPrompt": "A minimalist description of the baby's outfit for THIS specific day based on the weather. Focus on key items. Keep it short."
+    }
+  ]
+}
                 `;
 
                 const result = await model.generateContent(prompt);
                 
                 if (!result || !result.response || !result.response.text) {
-                    throw new Error(`Gemini API 呼叫失敗，無回應。`);
+                    throw new Error("Gemini API 呼叫失敗，無回應。");
                 }
                 
-                // Step 3: Parse JSON and Handle Sources
                 const responseText = result.response.text();
                 let cleanedJsonString = responseText;
                 const jsonBlockMatch = responseText.match(/```json\s*(\{[\s\S]*\})\s*```/i);
-                if (jsonBlockMatch) cleanedJsonString = jsonBlockMatch[1];
-                else {
+                if (jsonBlockMatch) {
+                    cleanedJsonString = jsonBlockMatch[1];
+                } else {
                     const firstBrace = responseText.indexOf('{');
                     const lastBrace = responseText.lastIndexOf('}');
-                    if (firstBrace !== -1 && lastBrace !== -1) cleanedJsonString = responseText.substring(firstBrace, lastBrace + 1);
+                    if (firstBrace !== -1 && lastBrace !== -1) {
+                        cleanedJsonString = responseText.substring(firstBrace, lastBrace + 1);
+                    }
                 }
 
                 let parsedData;
                 try {
                     parsedData = JSON.parse(cleanedJsonString);
                 } catch (jsonError) {
-                    const rawExcerpt = responseText.substring(0, 200);
-                    console.error("JSON 解析錯誤。原始回應：", rawExcerpt);
-                    throw new Error(`AI 返回的內容無法解析為 JSON 格式。`);
+                    console.error("JSON 解析錯誤。原始回應片段：", responseText.substring(0, 200));
+                    throw new Error("AI 返回的內容無法解析為 JSON 格式。");
                 }
                 
                 parsedData.sources = []; 
-                // --- 台灣地名修正：若使用者輸入的地點屬於台灣，一律顯示為「使用者輸入地點，台灣」 ---
+
+                // 台灣地名修正：若輸入地點屬於台灣，一律顯示為「使用者輸入地點，台灣」
                 try {
                     const destInput = (dest || "").trim();
                     const lowerDest = destInput.toLowerCase();
@@ -486,32 +536,35 @@ async function handleSearchSubmit(e) {
                     console.warn("台灣地名修正時發生錯誤，但不影響主要功能：", e);
                 }
 
-                if (result.response.candidates && result.response.candidates[0].groundingMetadata?.groundingChunks) {
-                    parsedData.sources = result.response.candidates[0].groundingMetadata.groundingChunks.map(chunk => ({
-                      title: chunk.web.title,
-                      uri: chunk.web.uri
-                    }));
+                // 若有 grounding 資訊，可放在 sources（目前不一定會有）
+                try {
+                    if (result.response.candidates &&
+                        result.response.candidates[0].groundingMetadata &&
+                        result.response.candidates[0].groundingMetadata.groundingChunks) {
+                        parsedData.sources = result.response.candidates[0].groundingMetadata.groundingChunks.map(chunk => ({
+                            title: chunk.web.title,
+                            uri: chunk.web.uri
+                        }));
+                    }
+                } catch (e) {
+                    console.warn("處理 grounding sources 時發生錯誤：", e);
                 }
 
                 window.currentWeatherData = parsedData;
 
-                // Step 4: Render Text and Start Image Generation
+                // Step 4: render + 生成圖片
                 renderWeatherCard(parsedData);
                 setLoading(true, "正在為每一天繪製專屬穿搭..."); 
                 
-                // --- 圖片生成 (使用 Pollinations.ai 替代) ---
                 await generateImages(parsedData);
                 
                 setLoading(false); 
                 document.getElementById('exportBar').classList.remove('hidden');
 
-
-            
-        } catch (error) {
+            } catch (error) {
                 console.error("Search failed:", error);
 
                 const { human, raw } = formatGeminiError(error);
-
                 const errorMessage =
                     human +
                     "\n\n【技術訊息｜協助排錯用】\n" +
@@ -519,17 +572,15 @@ async function handleSearchSubmit(e) {
 
                 setError(true, errorMessage);
                 setLoading(false);
+            }
         }
 
-
-
-        // 圖片生成邏輯 (改為依照每日穿搭建議，日式清淡手繪水彩風)
+        // 圖片生成邏輯（依照每日穿搭建議 + 日式清淡手繪水彩風）
         async function generateImages(data) {
             const imagePromises = (data.daily || []).map((day, i) => {
                 return new Promise((resolve) => {
                     const containerId = `img-container-${i}`;
 
-                    // 1. 組合穿搭摘要（中英雙語，盡量讓模型理解每一件衣物）
                     let clothingSummaryZh = "";
                     let clothingSummaryEn = "";
 
@@ -544,7 +595,6 @@ async function handleSearchSubmit(e) {
 
                             zhParts.push(cat ? `[${cat}] ${item}` : item);
 
-                            // 粗略依照類別給一個英文說明，幫助模型理解重點
                             let enDesc = "";
                             switch (cat) {
                                 case "Head":
@@ -569,7 +619,6 @@ async function handleSearchSubmit(e) {
                                     enDesc = "clothing item";
                             }
 
-                            // 若中文字裡有明顯關鍵字就直接帶進去
                             if (item.includes("毛帽")) {
                                 enDesc = "knitted beanie (毛帽)";
                             } else if (item.includes("羽絨")) {
@@ -585,15 +634,11 @@ async function handleSearchSubmit(e) {
                         clothingSummaryEn = enParts.join(", ");
                     }
 
-                    // 2. 取用天氣資訊與溫度
                     const weatherText = day.condition || "";
                     const tempText = day.temperature || "";
                     const locationTextRaw = (data.location || "").replace(/,/g, "，");
-
-                    // 3. 如果 Gemini 有給 visualPrompt，就一起當作輔助描述
                     const visualPrompt = (day.visualPrompt || "").trim();
 
-                    // 4. 組合最終提示詞（加強「一定要畫出這幾件衣服」的語氣）
                     let prompt =
                         `Japanese light watercolor hand-drawn illustration, soft pastel colors, gentle lines. ` +
                         `A cute baby or toddler in ${locationTextRaw}, weather: ${weatherText}, temperature: ${tempText}. `;
@@ -611,7 +656,6 @@ async function handleSearchSubmit(e) {
                     prompt += ` 全身入鏡，畫面重點在衣服與配件，背景簡潔柔和、偏日系清淡手繪風格，無文字、無多餘物件。`;
 
                     const encodedPrompt = encodeURIComponent(prompt);
-
                     const imageUrl =
                         `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
 
@@ -645,13 +689,20 @@ async function handleSearchSubmit(e) {
             await Promise.all(imagePromises);
         }
 
-
-        function getCategoryIcon(cat) {        function getCategoryIcon(cat) {
-            const icons = { 'Head': '🧢', 'Outerwear': '🧥', 'Top': '👕', 'Bottom': '👖', 'Shoes': '👟', 'Accessories': '🧣' };
+        // 穿搭類別 icon
+        function getCategoryIcon(cat) {
+            const icons = {
+                'Head': '🧢',
+                'Outerwear': '🧥',
+                'Top': '👕',
+                'Bottom': '👖',
+                'Shoes': '👟',
+                'Accessories': '🧣'
+            };
             return icons[cat] || '✨';
         }
 
-
+        // Render 結果卡片（含單日卡片 + Sources）
         function renderWeatherCard(data) {
             const container = document.getElementById('weatherCard');
             document.getElementById('resultContainer').classList.remove('hidden');
@@ -660,13 +711,17 @@ async function handleSearchSubmit(e) {
 
             let html = "";
             html += `<div id="weather-results-container">`;
-            html += `<div class="text-center mb-8">
-                        <h2 class="text-2xl md:text-3xl font-bold text-gray-700 tracking-wide mb-1">${locationName}</h2>
-                        <span class="inline-flex items-center px-4 py-1 rounded-full bg-gray-900 text-gray-50 text-xs tracking-[0.2em] uppercase">${data.dateRange}</span>
-                     </div>`;
+            html += `
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-700 tracking-wide mb-1">${locationName}</h2>
+                    <span class="inline-flex items-center px-4 py-1 rounded-full bg-gray-900 text-gray-50 text-xs tracking-[0.2em] uppercase">
+                        ${data.dateRange}
+                    </span>
+                </div>
+            `;
             html += `<div class="space-y-8">`;
 
-            data.daily.forEach((day, idx) => {
+            (data.daily || []).forEach((day, idx) => {
                 html += `
                 <div id="day-card-${idx}" class="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6 md:items-start break-inside-avoid">
                     <div class="w-full md:w-1/3 lg:w-1/4 flex-shrink-0">
@@ -689,7 +744,9 @@ async function handleSearchSubmit(e) {
                     <div class="flex-grow w-full">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 pb-4 border-b border-gray-100 gap-4">
                             <div class="flex items-center space-x-3">
-                                <div class="px-3 py-1 rounded-full bg-gray-900 text-gray-50 text-xs tracking-[0.2em] uppercase">${day.date}</div>
+                                <div class="px-3 py-1 rounded-full bg-gray-900 text-gray-50 text-xs tracking-[0.2em] uppercase">
+                                    ${day.date}
+                                </div>
                                 <span class="text-gray-600 font-medium text-lg">${day.condition}</span>
                             </div>
                             <div class="text-2xl font-bold text-gray-700 font-sans">${day.temperature}</div>
@@ -711,20 +768,28 @@ async function handleSearchSubmit(e) {
                 </div>`;
             });
 
-            html += `</div></div>`;
-            container.innerHTML = html;
-        }
-            // Sources
+            html += `</div>`;
+
             if (data.sources && data.sources.length > 0) {
-                 html += `<div class="text-center mt-8"><p class="text-xs text-gray-300 mb-2">數據來源 (Gemini Search Grounding)</p><div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
-                             ${data.sources.map((source, idx) => `<a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-400 hover:text-blue-500 underline decoration-gray-200 transition-colors">${source.title}</a>`).join('')}
-                          </div></div>`;
+                html += `
+                    <div class="text-center mt-8">
+                        <p class="text-xs text-gray-300 mb-2">數據來源（Gemini Search Grounding）</p>
+                        <div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                            ${data.sources.map(source => `
+                                <a href="${source.uri}" target="_blank" rel="noopener noreferrer"
+                                   class="text-xs text-gray-400 hover:text-blue-500 underline decoration-gray-200 transition-colors">
+                                    ${source.title}
+                                </a>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
             }
 
-            html += `</div></div>`;
+            html += `</div>`; // end of weather-results-container
+
             container.innerHTML = html;
         }
-
 
         // 初始化檢查
         function checkApiKeysOnLoad() {
@@ -732,12 +797,9 @@ async function handleSearchSubmit(e) {
             const modal = document.getElementById('apiKeyModal');
             const resetButton = document.getElementById('resetKeyBtn');
             
-            // 確保重設按鈕永遠顯示
             if (resetButton) {
                 resetButton.classList.remove('hidden');
             }
-            
-            // 檢查 Key 是否存在，若不存在則顯示輸入框
             if (!geminiKey) {
                 modal.classList.remove('hidden');
             } else {
@@ -745,12 +807,8 @@ async function handleSearchSubmit(e) {
             }
         }
         
-        // =======================================================
-        // 事件監聽器 (確保在 DOM 載入後執行)
-        // =======================================================
-        
+        // DOM 載入完成後初始化
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. 初始化日期
             const today = new Date().toISOString().split('T')[0];
             const afterTomorrow = new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0];
             const startDateEl = document.getElementById('startDate');
@@ -759,16 +817,13 @@ async function handleSearchSubmit(e) {
             if (startDateEl) { startDateEl.value = today; startDateEl.min = today; }
             if (endDateEl) { endDateEl.value = afterTomorrow; endDateEl.min = today; }
 
-            // 2. 檢查 Key
             checkApiKeysOnLoad(); 
             
-            // 3. 綁定表單提交事件
             const searchForm = document.getElementById('searchForm');
             if (searchForm) {
                 searchForm.addEventListener('submit', handleSearchSubmit);
             }
         });
-
     </script>
 </body>
 </html>
