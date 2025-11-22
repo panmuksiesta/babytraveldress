@@ -417,34 +417,57 @@
 
         // 圖片生成邏輯 (已修正為 Pollinations.ai，避免 ai.models 錯誤)
         async function generateImages(data) {
-             const imagePromises = data.daily.map((day, i) => {
-                return new Promise(async (resolve) => {
-                    const containerId = `img-container-${i}`;
-                    const stylePrompt = `(Art Style: Minimalist Japanese flat illustration, Vector style). ${day.visualPrompt}. Character: A cute baby or toddler. Style guide: Clean simple lines, flat colors, pastel tones (beige, soft pink, soft blue), plenty of white space (negative space), no complex shading, simple geometric shapes. Background: Pure white or very subtle solid color. Full body shot.`;
-                    const encodedPrompt = encodeURIComponent(stylePrompt);
-                    
-                    // 使用 Pollinations.ai 進行圖片生成 (不依賴 Gemini API Key)
-                    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random()*1000)}`;
+    const imagePromises = data.daily.map((day, i) => {
+        return new Promise((resolve) => {
+            const containerId = `img-container-${i}`;
 
-                    const img = new Image();
-                    img.crossOrigin = "anonymous";
-                    img.src = imageUrl;
-                    img.className = "w-full h-full object-cover p-0 animate-fade-in";
-                    
-                    img.onload = () => {
-                        const container = document.getElementById(containerId);
-                        if (container) { container.innerHTML = ''; container.appendChild(img); data.daily[i].generatedImage = imageUrl; }
-                        resolve();
-                    };
-                    img.onerror = () => {
-                        const container = document.getElementById(containerId);
-                        if (container) container.innerHTML = '<div class="text-xs text-red-400 p-4 text-center">繪圖失敗，請重新整理重試</div>';
-                        resolve();
-                    };
-                });
-            });
-            await Promise.all(imagePromises);
-        }
+            const clothingSummary = Array.isArray(day.clothingAdvice)
+                ? day.clothingAdvice.map(c => `${c.item}`).join(', ')
+                : '';
+
+            const weatherText = day.weatherDescription || '';
+            const tempText = day.tempRange || '';
+            const locationText = (data.location || '').replace(/,/g, '，');
+
+            const prompt =
+                `Minimalist Japanese flat illustration, vector style. ` +
+                `A cute baby or toddler in ${locationText}, dressed appropriately for ${weatherText}天氣，氣溫${tempText}。` +
+                (clothingSummary ? ` Outfit items: ${clothingSummary}。` : '') +
+                ` Soft pastel colors, clean simple background, full body view, focus on the outfit, no text, no extra objects.`;
+
+            const encodedPrompt = encodeURIComponent(prompt);
+
+            const imageUrl =
+                `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
+
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = imageUrl;
+            img.className = "w-full h-full object-cover p-0 animate-fade-in";
+
+            img.onload = () => {
+                const container = document.getElementById(containerId);
+                if (container) {
+                    container.innerHTML = "";
+                    container.appendChild(img);
+                }
+                day.generatedImage = imageUrl;
+                resolve();
+            };
+
+            img.onerror = () => {
+                const container = document.getElementById(containerId);
+                if (container) {
+                    container.innerHTML =
+                        '<div class="text-xs text-red-400 p-4 text-center">繪圖失敗，請重新整理重試</div>';
+                }
+                resolve();
+            };
+        });
+    });
+
+    await Promise.all(imagePromises);
+}
 
         // 渲染邏輯 (保持不變)
         function getCategoryIcon(cat) {
