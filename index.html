@@ -90,6 +90,7 @@
           </header>
 
           <!-- API Key 區塊 -->
+                    <!-- API Key 區塊 -->
           <section class="mb-6 p-4 rounded-2xl bg-rose-50/80 border border-rose-100 space-y-3">
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
@@ -100,11 +101,15 @@
                   （只會儲存在你的瀏覽器中）
                 </span>
               </div>
-              <span id="apiStatusBadge" class="inline-flex items-center gap-1 text-[10px] text-amber-600">
+              <span
+                id="apiStatusBadge"
+                class="inline-flex items-center gap-1 text-[10px] text-amber-600"
+              >
                 <span class="w-2 h-2 bg-amber-400 rounded-full"></span>
                 尚未設定
               </span>
             </div>
+
             <div class="flex flex-col md:flex-row gap-3">
               <input
                 id="apiKeyInput"
@@ -112,24 +117,38 @@
                 placeholder="請貼上你的 Gemini API Key"
                 class="flex-1 px-3 py-2 text-xs md:text-sm rounded-xl border border-rose-200 bg-white/80 outline-none focus:ring-2 focus:ring-accent-primary/40"
               />
-              <div class="flex gap-2">
+
+              <div class="flex flex-col gap-2">
+                <!-- 上排：儲存 / 重設 -->
+                <div class="flex gap-2">
+                  <button
+                    id="saveApiBtn"
+                    type="button"
+                    class="px-3 md:px-4 py-2 text-xs md:text-sm rounded-xl bg-accent-primary text-white font-semibold hover:bg-rose-500 transition-colors"
+                  >
+                    儲存
+                  </button>
+                  <button
+                    id="resetApiBtn"
+                    type="button"
+                    class="px-3 md:px-4 py-2 text-xs md:text-sm rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                  >
+                    重設
+                  </button>
+                </div>
+
+                <!-- 下排：前往取得 / 更換 API Key -->
                 <button
-                  id="saveApiBtn"
                   type="button"
-                  class="px-3 md:px-4 py-2 text-xs md:text-sm rounded-xl bg-accent-primary text-white font-semibold hover:bg-rose-500 transition-colors"
+                  onclick="window.open('https://aistudio.google.com/app/apikey', '_blank')"
+                  class="px-3 md:px-4 py-2 text-xs md:text-sm rounded-xl border border-rose-200 bg-white text-rose-500 hover:bg-rose-50 transition-colors flex items-center justify-center gap-1"
                 >
-                  儲存
-                </button>
-                <button
-                  id="resetApiBtn"
-                  type="button"
-                  class="px-3 md:px-4 py-2 text-xs md:text-sm rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-                >
-                  重設
+                  <span>🔑 前往取得 / 更換 Gemini API Key</span>
                 </button>
               </div>
             </div>
           </section>
+
 
           <!-- 查詢表單 -->
           <form
