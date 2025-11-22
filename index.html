@@ -70,13 +70,21 @@
       }
 
       /* ===== 匯出模式：讓顏色更紮實 + 強制單欄排版（避免桌機版被切掉） ===== */
-      #resultsCard.export-solid {
-        background-color: #ffffff !important;
-        box-shadow: none !important;
-        border-color: #e5e7eb !important;
-        /* 把亮度稍微壓低，對比＆飽和度拉高很多 */
-        filter: brightness(0.95) contrast(1.6) saturate(1.8);
-      }
+/* 匯出模式：強化顏色（加強版） */
+#resultsCard.export-solid {
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  border-color: #e5e7eb !important;
+
+  /* 大幅加深顏色 */
+  filter: brightness(0.90) contrast(2.4) saturate(2.4);
+}
+
+/* 匯出時：也加強圖片本身 */
+#resultsCard.export-solid img {
+  filter: brightness(0.90) contrast(2.4) saturate(2.4);
+}
+
 
       /* 匯出時：加強寶寶插圖本身的顏色與對比 */
       #resultsCard.export-solid img {
