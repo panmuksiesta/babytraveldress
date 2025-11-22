@@ -363,7 +363,88 @@ Output JSON ONLY, no markdown, in EXACT shape:
       }
 
       // ========= 呼叫 Gemini（圖片） =========
+            // ========= 呼叫 Gemini（圖片） =========
       async function callGeminiImage(apiKey, visualPrompt) {
+        // 改用專門有圖像能力的模型
+        const endpoint =
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=" +
+          encodeURIComponent(apiKey);
+
+        const enhancedPrompt = `
+(Art Style: Minimalist Japanese flat illustration, Vector style).
+${visualPrompt}.
+Character: A cute baby or toddler.
+Style guide: clean simple lines, flat colors, pastel tones (pinks, creams, light browns, soft blues), lots of negative space, no complex shading, simple geometric shapes.
+Background: pure white or very light solid color.
+Full body shot.
+        `.trim();
+
+        const body = {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: enhancedPrompt }],
+            },
+          ],
+          // 告訴 API 要回「圖片」格式
+          generationConfig: {
+            response_mime_type: "image/png"
+          }
+        };
+
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+          const json = await res.json();
+
+          if (json.error) {
+            throw new Error(json.error.message || "Gemini Image API error");
+          }
+
+          const parts = (json.candidates?.[0]?.content?.parts) || [];
+          let inline = null;
+          for (const p of parts) {
+            if (p.inlineData && p.inlineData.data) {
+              inline = p.inlineData;
+              break;
+            }
+          }
+
+          if (!inline || !inline.data) {
+            throw new Error("No inline image data");
+          }
+
+          const mime = inline.mimeType || "image/png";
+          return "data:" + mime + ";base64," + inline.data;
+        } catch (err) {
+          console.error("Image generation error:", err);
+
+          // ⭐ 重點：失敗就用「預設小圖」，不要一直轉圈圈
+          const fallbackSvg =
+            "<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>" +
+            "<defs><linearGradient id='bg' x1='0' y1='0' x2='1' y2='1'>" +
+            "<stop offset='0%' stop-color='#FFE4EC'/>" +
+            "<stop offset='100%' stop-color='#FFF7D6'/>" +
+            "</linearGradient></defs>" +
+            "<rect x='0' y='0' width='512' height='512' fill='url(#bg)'/>" +
+            "<circle cx='256' cy='200' r='90' fill='#FFF' />" +
+            "<circle cx='226' cy='190' r='10' fill='#FF8BA7' />" +
+            "<circle cx='286' cy='190' r='10' fill='#FF8BA7' />" +
+            "<path d='M210 230 Q256 270 302 230' stroke='#FF8BA7' stroke-width='8' fill='none' stroke-linecap='round'/>" +
+            "<rect x='146' y='280' width='220' height='130' rx='40' ry='40' fill='#FFFFFF' />" +
+            "<text x='50%' y='330' text-anchor='middle' font-size='32' fill='#FF8BA7' font-family='sans-serif'>Baby look</text>" +
+            "<text x='50%' y='368' text-anchor='middle' font-size='20' fill='#F97373' font-family='sans-serif'>image fallback</text>" +
+            "</svg>";
+
+          const base64 = btoa(unescape(encodeURIComponent(fallbackSvg)));
+          return "data:image/svg+xml;base64," + base64;
+        }
+      }
+
         const endpoint =
           "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
           encodeURIComponent(apiKey);
