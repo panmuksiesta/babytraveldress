@@ -473,18 +473,64 @@
         return new Promise((resolve) => {
             const containerId = `img-container-${i}`;
 
-            // 1. 組合穿搭摘要（含類別）
-            let clothingSummary = "";
+            // 1. 組合穿搭摘要（中英雙語，盡量讓模型理解每一件衣物）
+            let clothingSummaryZh = "";
+            let clothingSummaryEn = "";
+
             if (Array.isArray(day.clothingAdvice) && day.clothingAdvice.length > 0) {
-                const parts = day.clothingAdvice.map(c => {
-                    const cat = c.category ? `[${c.category}]` : "";
-                    const item = c.item || "";
-                    return `${cat}${item}`.trim();
-                }).filter(Boolean);
-                clothingSummary = parts.join("、");
+                const zhParts = [];
+                const enParts = [];
+
+                day.clothingAdvice.forEach((c) => {
+                    const cat = c.category || "";
+                    const item = (c.item || "").trim();
+                    if (!item) return;
+
+                    zhParts.push(cat ? `[${cat}] ${item}` : item);
+
+                    // 粗略依照類別給一個英文說明，幫助模型理解重點
+                    let enDesc = "";
+                    const lowerItem = item.toLowerCase();
+                    switch (cat) {
+                        case "Head":
+                            enDesc = "warm hat";
+                            break;
+                        case "Outerwear":
+                            enDesc = "coat or jacket";
+                            break;
+                        case "Top":
+                            enDesc = "top or shirt";
+                            break;
+                        case "Bottom":
+                            enDesc = "pants or skirt";
+                            break;
+                        case "Shoes":
+                            enDesc = "shoes";
+                            break;
+                        case "Accessories":
+                            enDesc = "accessories like scarf or gloves";
+                            break;
+                        default:
+                            enDesc = "clothing item";
+                    }
+
+                    // 如果中文字裡有明顯關鍵字就直接帶進去
+                    if (item.includes("毛帽")) {
+                        enDesc = "knitted beanie (毛帽)";
+                    } else if (item.includes("羽絨")) {
+                        enDesc = "puffy down jacket (羽絨外套)";
+                    } else if (item.includes("雨衣") || item.includes("雨帽")) {
+                        enDesc = "raincoat or rain hat";
+                    }
+
+                    enParts.push(`${enDesc} (${item})`);
+                });
+
+                clothingSummaryZh = zhParts.join("、");
+                clothingSummaryEn = enParts.join(", ");
             }
 
-            // 2. 取用天氣資訊與溫度（對應 JSON schema: condition / temperature）
+            // 2. 取用天氣資訊與溫度
             const weatherText = day.condition || "";
             const tempText = day.temperature || "";
             const locationTextRaw = (data.location || "").replace(/,/g, "，");
@@ -492,20 +538,22 @@
             // 3. 如果 Gemini 有給 visualPrompt，就一起當作輔助描述
             const visualPrompt = (day.visualPrompt || "").trim();
 
-            // 4. 組合最終提示詞（改為日式清淡手繪水彩風）
+            // 4. 組合最終提示詞（加強「一定要畫出這幾件衣服」的語氣）
             let prompt =
                 `Japanese light watercolor hand-drawn illustration, soft pastel colors, gentle lines. ` +
-                `一個可愛的寶寶或幼兒，位於「${locationTextRaw}」，天氣為「${weatherText}」，氣溫 ${tempText}。`;
+                `A cute baby or toddler in ${locationTextRaw}, weather: ${weatherText}, temperature: ${tempText}. `;
 
-            if (clothingSummary) {
-                prompt += ` 請務必清楚畫出以下穿搭重點：${clothingSummary}。`;
+            if (clothingSummaryEn) {
+                prompt += `The baby MUST clearly wear ALL of these clothing items: ${clothingSummaryEn}. Do NOT omit any of them. `;
             }
-
+            if (clothingSummaryZh) {
+                prompt += `寶寶一定要明顯穿著以下每一項服裝：${clothingSummaryZh}。`;
+            }
             if (visualPrompt) {
                 prompt += ` 參考這段穿搭氛圍描述：${visualPrompt}。`;
             }
 
-            prompt += ` 畫面需全身入鏡，重點在衣服與配件，背景簡潔柔和、偏日系清淡手繪風格，無文字、無多餘物件。`;
+            prompt += ` 全身入鏡，畫面重點在衣服與配件，背景簡潔柔和、偏日系清淡手繪風格，無文字、無多餘物件。`;
 
             const encodedPrompt = encodeURIComponent(prompt);
 
@@ -541,7 +589,8 @@
     });
 
     await Promise.all(imagePromises);
-}\n
+}
+
         // 渲染邏輯 (保持不變)
         function getCategoryIcon(cat) {
             const icons = { 'Head': '🧢', 'Outerwear': '🧥', 'Top': '👕', 'Bottom': '👖', 'Shoes': '👟', 'Accessories': '🧣' };
