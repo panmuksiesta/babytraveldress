@@ -74,7 +74,13 @@
         background-color: #ffffff !important;
         box-shadow: none !important;
         border-color: #e5e7eb !important;
-        filter: contrast(1.15) saturate(1.2);
+        /* 把亮度稍微壓低，對比＆飽和度拉高很多 */
+        filter: brightness(0.95) contrast(1.6) saturate(1.8);
+      }
+
+      /* 匯出時：加強寶寶插圖本身的顏色與對比 */
+      #resultsCard.export-solid img {
+        filter: brightness(0.95) contrast(1.6) saturate(1.8);
       }
 
       /* 匯出時：強制讓所有 daily card 改為手機版的直式排版 */
