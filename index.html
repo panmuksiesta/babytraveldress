@@ -199,4 +199,522 @@
               </button>
               <button
                 id="exportExcelBtn"
-                class="flex items-center gap
+                class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors text-sm font-bold"
+              >
+                📊 Export Excel
+              </button>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <footer class="mt-10 text-center text-gray-300 text-[10px]">
+            <p>BabyTravel Weather &amp; Style · 使用你的 Gemini API Key</p>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ========= 全域狀態 =========
+      let currentApiKey = "";
+      let currentResultData = null; // { location, dateRange, daily: [...] }
+
+      // 預設日期（今天 ~ +2 天）
+      function initDefaultDates() {
+        const startInput = document.getElementById("startDateInput");
+        const endInput = document.getElementById("endDateInput");
+        const today = new Date();
+        const end = new Date();
+        end.setDate(end.getDate() + 2);
+
+        const toYMD = (d) => d.toISOString().split("T")[0];
+
+        startInput.value = toYMD(today);
+        startInput.min = toYMD(today);
+        endInput.value = toYMD(end);
+        endInput.min = toYMD(today);
+      }
+
+      function setStatus(message, type) {
+        const area = document.getElementById("statusArea");
+        area.textContent = message;
+        if (type === "error") {
+          area.classList.remove("text-gray-400");
+          area.classList.add("text-red-500");
+        } else {
+          area.classList.remove("text-red-500");
+          area.classList.add("text-gray-400");
+        }
+      }
+
+      function updateApiStatusBadge() {
+        const badge = document.getElementById("apiStatusBadge");
+        if (currentApiKey) {
+          badge.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span>已儲存';
+          badge.classList.remove("text-amber-600");
+          badge.classList.add("text-green-600");
+        } else {
+          badge.innerHTML = '<span class="w-2 h-2 bg-amber-400 rounded-full"></span>尚未設定';
+          badge.classList.remove("text-green-600");
+          badge.classList.add("text-amber-600");
+        }
+      }
+
+      function categoryIcon(category) {
+        switch (category) {
+          case "Head": return "🧢";
+          case "Outerwear": return "🧥";
+          case "Top": return "👕";
+          case "Bottom": return "👖";
+          case "Shoes": return "👟";
+          case "Accessories": return "🧣";
+          default: return "👶";
+        }
+      }
+
+      // ========= 呼叫 Gemini（文字） =========
+      async function callGeminiText(apiKey, destination, startDate, endDate) {
+        const endpoint =
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
+          encodeURIComponent(apiKey);
+
+        const prompt = `
+I am traveling to ${destination} from ${startDate} to ${endDate} with a baby/toddler.
+
+Please:
+1. Based on typical climate and season (no need for live forecast), estimate the daily weather.
+2. For EACH DAY in this range, output:
+   - "date": in format "MM/DD (E)" with short weekday in Chinese if possible.
+   - "temperature": an estimated range like "18–22°C"
+   - "condition": short Traditional Chinese weather phrase (e.g. "多雲", "短暫陣雨", "晴時多雲").
+   - "clothingAdvice": an array of 3–6 items. Each item:
+       {
+         "category": one of "Head", "Outerwear", "Top", "Bottom", "Shoes", "Accessories",
+         "item": short Traditional Chinese clothing name,
+         "reason": short Traditional Chinese explanation
+       }
+   - "visualPrompt": an English prompt describing a cute baby/toddler outfit illustration for that day's weather.
+
+Output JSON ONLY, no markdown, in EXACT shape:
+
+{
+  "location": "place name",
+  "dateRange": "YYYY/MM/DD–YYYY/MM/DD",
+  "daily": [
+    {
+      "date": "10/25 (五)",
+      "temperature": "18–22°C",
+      "condition": "多雲短暫雨",
+      "clothingAdvice": [
+        { "category": "Head", "item": "薄針織毛帽", "reason": "早晚偏涼，保護頭部保暖" }
+      ],
+      "visualPrompt": "A cute toddler in ..."
+    }
+  ]
+}
+        `.trim();
+
+        const body = {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
+        };
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = await res.json();
+        if (json.error) {
+          throw new Error(json.error.message || "Gemini API error");
+        }
+
+        const parts = (json.candidates?.[0]?.content?.parts) || [];
+        let text = "";
+        for (const p of parts) {
+          if (typeof p.text === "string") text += p.text;
+        }
+        if (!text) {
+          throw new Error("No text content from Gemini");
+        }
+
+        // 嘗試抓出純 JSON
+        const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)```/i);
+        if (jsonBlockMatch) {
+          text = jsonBlockMatch[1];
+        } else {
+          const firstBrace = text.indexOf("{");
+          const lastBrace = text.lastIndexOf("}");
+          if (firstBrace !== -1 && lastBrace !== -1) {
+            text = text.substring(firstBrace, lastBrace + 1);
+          }
+        }
+
+        const data = JSON.parse(text);
+        if (!data.daily || !Array.isArray(data.daily)) {
+          throw new Error("Unexpected JSON structure");
+        }
+        return data;
+      }
+
+      // ========= 呼叫 Gemini（圖片） =========
+      async function callGeminiImage(apiKey, visualPrompt) {
+        const endpoint =
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
+          encodeURIComponent(apiKey);
+
+        const enhancedPrompt = `
+(Art Style: Minimalist Japanese flat illustration, Vector style).
+${visualPrompt}.
+Character: A cute baby or toddler.
+Style guide: clean simple lines, flat colors, pastel tones (pinks, creams, light browns, soft blues), lots of negative space, no complex shading, simple geometric shapes.
+Background: pure white or very light solid color.
+Full body shot.
+        `.trim();
+
+        const body = {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: enhancedPrompt }],
+            },
+          ],
+          generationConfig: {
+            response_mime_type: "image/png",
+          },
+        };
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const json = await res.json();
+        if (json.error) {
+          throw new Error(json.error.message || "Gemini Image API error");
+        }
+
+        const parts = json.candidates?.[0]?.content?.parts || [];
+        let imgPart = null;
+        for (const p of parts) {
+          if (p.inlineData) {
+            imgPart = p.inlineData;
+            break;
+          }
+        }
+        if (!imgPart || !imgPart.data) {
+          throw new Error("No image inline data");
+        }
+        const mime = imgPart.mimeType || "image/png";
+        return "data:" + mime + ";base64," + imgPart.data;
+      }
+
+      // ========= 畫面渲染 =========
+      function renderResults(data, withImages) {
+        const wrapper = document.getElementById("resultsWrapper");
+        if (!data) {
+          wrapper.innerHTML = "";
+          document.getElementById("exportBar").classList.add("hidden");
+          return;
+        }
+
+        let html = "";
+        html += '<div id="resultsCard" class="bg-baby-card rounded-3xl shadow-xl shadow-rose-100 border border-rose-100 p-6 md:p-8 space-y-6 animate-fade-in">';
+
+        // Header
+        html += `
+          <div class="flex flex-wrap items-baseline justify-between gap-3 pb-4 border-b border-gray-100">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-gray-400">Baby Travel Planner</p>
+              <h2 class="text-2xl md:text-3xl font-bold text-baby-text mt-1">
+                ${data.location || "旅行目的地"}
+              </h2>
+            </div>
+            <div class="bg-baby-yellow text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">
+              ${data.dateRange || ""}
+            </div>
+          </div>
+        `;
+
+        // Daily cards
+        html += '<div class="space-y-6">';
+        data.daily.forEach((day, idx) => {
+          const adviceHtml = (day.clothingAdvice || [])
+            .map((item) => {
+              return `
+                <div class="flex items-start gap-3 p-2 rounded-xl bg-white/70 border border-rose-50">
+                  <div class="w-8 h-8 flex items-center justify-center rounded-full bg-rose-50 text-lg">
+                    ${categoryIcon(item.category)}
+                  </div>
+                  <div class="space-y-1">
+                    <p class="text-xs font-semibold text-baby-text">
+                      [${item.category}] ${item.item}
+                    </p>
+                    <p class="text-xs text-gray-500 leading-snug">
+                      ${item.reason}
+                    </p>
+                  </div>
+                </div>
+              `;
+            })
+            .join("");
+
+          const imgWrapperId = "day-image-wrapper-" + idx;
+
+          let imageArea = "";
+          if (withImages && day.generatedImage) {
+            imageArea = `
+              <div class="aspect-square w-full rounded-2xl bg-white relative flex items-center justify-center border border-gray-50">
+                <img src="${day.generatedImage}" alt="Outfit for ${day.date}" class="w-full h-full object-contain p-2" crossOrigin="anonymous" />
+              </div>
+              <div class="text-center mt-3 hidden md:block">
+                <p class="text-[10px] text-gray-300 font-light tracking-[0.2em] uppercase">Daily Look</p>
+              </div>
+            `;
+          } else {
+            imageArea = `
+              <div class="aspect-square w-full rounded-2xl bg-white relative flex items-center justify-center border border-gray-50">
+                <div class="flex flex-col items-center text-gray-300 space-y-2">
+                  <div class="w-8 h-8 border-2 border-gray-200 border-t-accent-primary rounded-full animate-spin"></div>
+                  <span class="text-xs tracking-widest">DRAWING...</span>
+                </div>
+              </div>
+              <div class="text-center mt-3 hidden md:block">
+                <p class="text-[10px] text-gray-300 font-light tracking-[0.2em] uppercase">Daily Look</p>
+              </div>
+            `;
+          }
+
+          html += `
+            <div class="flex flex-col md:flex-row gap-6 md:gap-8 p-4 md:p-5 rounded-2xl bg-gradient-to-r from-white to-rose-50/70 border border-rose-100">
+              <div class="w-full md:w-1/3 lg:w-1/4 flex-shrink-0" id="${imgWrapperId}">
+                ${imageArea}
+              </div>
+              <div class="flex-grow w-full space-y-4">
+                <div class="flex flex-wrap items-center justify-between pb-3 border-b border-gray-100 gap-3">
+                  <div class="flex items-center space-x-3">
+                    <div class="bg-baby-yellow text-yellow-700 font-bold px-4 py-2 rounded-xl text-sm">
+                      ${day.date || ""}
+                    </div>
+                    <div class="flex items-center text-sm text-gray-500 space-x-2">
+                      <span>🌤 ${day.condition || ""}</span>
+                      <span class="w-px h-3 bg-gray-200"></span>
+                      <span>🌡 ${day.temperature || ""}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  ${adviceHtml}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        html += "</div></div>";
+
+        wrapper.innerHTML = html;
+        document.getElementById("exportBar").classList.remove("hidden");
+      }
+
+      async function generateAll(destination, startDate, endDate) {
+        if (!currentApiKey) {
+          alert("請先設定 Gemini API Key");
+          return;
+        }
+
+        setStatus("正在分析旅程天氣與寶寶穿搭建議…", "info");
+        document.getElementById("generateBtn").disabled = true;
+        document.getElementById("generateBtn").classList.add("opacity-70");
+
+        try {
+          // Step 1: 文字資料
+          const data = await callGeminiText(currentApiKey, destination, startDate, endDate);
+          // 初始化不含圖片的資料
+          data.daily = data.daily.map((d) => ({
+            ...d,
+            generatedImage: null,
+          }));
+          currentResultData = data;
+          renderResults(currentResultData, false);
+          setStatus("已取得穿搭建議，正在為每一天繪製寶寶插圖…", "info");
+
+          // Step 2: 逐日畫圖
+          for (let i = 0; i < currentResultData.daily.length; i++) {
+            const day = currentResultData.daily[i];
+            if (!day.visualPrompt) continue;
+            try {
+              const imgUrl = await callGeminiImage(currentApiKey, day.visualPrompt);
+              currentResultData.daily[i].generatedImage = imgUrl;
+              renderResults(currentResultData, true); // 更新畫面
+            } catch (imgErr) {
+              console.error("Image error for day", i, imgErr);
+            }
+          }
+
+          setStatus("完成！可以下載圖片或匯出 Excel。", "info");
+        } catch (err) {
+          console.error(err);
+          setStatus(
+            "發生錯誤，請確認 API Key 是否有效，或稍後再試。",
+            "error"
+          );
+          currentResultData = null;
+          renderResults(null, false);
+        } finally {
+          document.getElementById("generateBtn").disabled = false;
+          document.getElementById("generateBtn").classList.remove("opacity-70");
+        }
+      }
+
+      // ========= 匯出功能 =========
+      async function handleSaveImage() {
+        if (!currentResultData) {
+          alert("尚無可匯出的內容。");
+          return;
+        }
+        const container = document.getElementById("resultsCard");
+        if (!container) {
+          alert("找不到要匯出的內容區塊。");
+          return;
+        }
+        if (typeof html2canvas === "undefined") {
+          alert("html2canvas 尚未載入，無法匯出圖片。");
+          return;
+        }
+        try {
+          const canvas = await html2canvas(container, {
+            backgroundColor: "#FFFBF0",
+            useCORS: true,
+            scale: 2,
+          });
+          const dataUrl = canvas.toDataURL("image/png");
+          const a = document.createElement("a");
+          const safeLocation = (currentResultData.location || "trip")
+            .replace(/[\s/\\]+/g, "-")
+            .toLowerCase();
+          a.href = dataUrl;
+          a.download = "babytravel-" + safeLocation + ".png";
+          a.click();
+        } catch (e) {
+          console.error(e);
+          alert("無法儲存圖片，請稍後再試。");
+        }
+      }
+
+      function handleExportExcel() {
+        if (!currentResultData) {
+          alert("尚無可匯出的內容。");
+          return;
+        }
+        const data = currentResultData;
+        let rows = "";
+        data.daily.forEach((day) => {
+          const clothes = (day.clothingAdvice || [])
+            .map((c) => "[" + c.category + "] " + c.item)
+            .join("<br/>");
+          const imgTag = day.generatedImage
+            ? '<img src="' + day.generatedImage + '" width="150" height="150" />'
+            : "(No Image)";
+          rows += `
+            <tr>
+              <td style="vertical-align: middle; padding: 8px;">${day.date || ""}</td>
+              <td style="vertical-align: middle; padding: 8px;">${day.condition || ""}</td>
+              <td style="vertical-align: middle; padding: 8px;">${day.temperature || ""}</td>
+              <td style="vertical-align: middle; padding: 8px;">${clothes}</td>
+              <td style="vertical-align: middle; padding: 8px;">${imgTag}</td>
+            </tr>
+          `;
+        });
+
+        const html =
+          '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+          'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
+          'xmlns="http://www.w3.org/TR/REC-html40">' +
+          "<head>" +
+          '<meta charset="UTF-8" />' +
+          "<!--[if gte mso 9]>" +
+          "<xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>" +
+          "<x:Name>BabyTravel</x:Name>" +
+          "<x:WorksheetOptions><x:Print><x:ValidPrinterInfo/></x:Print></x:WorksheetOptions>" +
+          "</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml>" +
+          "<![endif]-->" +
+          "</head><body>" +
+          '<table border="1" style="border-collapse: collapse;">' +
+          "<thead>" +
+          '<tr style="background:#FFE4EC;">' +
+          "<th>Date</th><th>Condition</th><th>Temperature</th><th>Outfit Advice</th><th>Baby Look</th>" +
+          "</tr></thead><tbody>" +
+          rows +
+          "</tbody></table></body></html>";
+
+        const blob = new Blob([html], {
+          type: "application/vnd.ms-excel",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const safeLocation = (data.location || "trip")
+          .replace(/[\s/\\]+/g, "-")
+          .toLowerCase();
+        a.href = url;
+        a.download = "babytravel-" + safeLocation + ".xls";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // ========= 初始化 =========
+      document.addEventListener("DOMContentLoaded", function () {
+        // 載入 API Key
+        const savedKey = localStorage.getItem("geminiApiKey") || "";
+        currentApiKey = savedKey;
+        document.getElementById("apiKeyInput").value = savedKey;
+        updateApiStatusBadge();
+        initDefaultDates();
+
+        // API Key 按鈕
+        document.getElementById("saveApiBtn").addEventListener("click", function () {
+          const v = document.getElementById("apiKeyInput").value.trim();
+          if (!v) {
+            alert("請輸入有效的 API Key");
+            return;
+          }
+          currentApiKey = v;
+          localStorage.setItem("geminiApiKey", v);
+          updateApiStatusBadge();
+          alert("已儲存 API Key");
+        });
+
+        document.getElementById("resetApiBtn").addEventListener("click", function () {
+          localStorage.removeItem("geminiApiKey");
+          currentApiKey = "";
+          document.getElementById("apiKeyInput").value = "";
+          updateApiStatusBadge();
+          setStatus(
+            "API Key 已重設，如要繼續使用請重新貼上新的 Key。",
+            "info"
+          );
+        });
+
+        // 查詢表單
+        document.getElementById("searchForm").addEventListener("submit", function (e) {
+          e.preventDefault();
+          const destination = document
+            .getElementById("destinationInput")
+            .value.trim();
+          const startDate = document.getElementById("startDateInput").value;
+          const endDate = document.getElementById("endDateInput").value;
+          if (!destination) return;
+          generateAll(destination, startDate, endDate);
+        });
+
+        // 匯出按鈕
+        document.getElementById("saveImageBtn").addEventListener("click", handleSaveImage);
+        document.getElementById("exportExcelBtn").addEventListener("click", handleExportExcel);
+      });
+    </script>
+  </body>
+</html>
