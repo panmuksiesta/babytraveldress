@@ -61,6 +61,14 @@
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
       }
+        /* 匯出成圖片時使用的樣式：讓顏色更紮實一點、不那麼透明感 */
+  #resultsCard.export-solid {
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border-color: #e5e7eb !important;
+    filter: contrast(1.1) saturate(1.15);
+  }
+
     </style>
   </head>
 
@@ -554,11 +562,12 @@ Output JSON ONLY, no markdown, in EXACT shape:
       }
 
       // ========= 匯出功能 =========
-      async function handleSaveImage() {
+            async function handleSaveImage() {
         if (!currentResultData) {
           alert("尚無可匯出的內容。");
           return;
         }
+
         const container = document.getElementById("resultsCard");
         if (!container) {
           alert("找不到要匯出的內容區塊。");
@@ -568,12 +577,19 @@ Output JSON ONLY, no markdown, in EXACT shape:
           alert("html2canvas 尚未載入，無法匯出圖片。");
           return;
         }
+
+        // ① 匯出前先加上一個「實心匯出模式」，讓背景更實、更有對比
+        container.classList.add("export-solid");
+
         try {
           const canvas = await html2canvas(container, {
-            backgroundColor: "#FFFBF0",
-            useCORS: true,
+            // 匯出時用純白背景，比淡奶油色更不容易看起來「漂掉」
+            backgroundColor: "#FFFFFF",
+            // 讓文字＆圖片更清楚
             scale: 2,
+            useCORS: true,
           });
+
           const dataUrl = canvas.toDataURL("image/png");
           const a = document.createElement("a");
           const safeLocation = (currentResultData.location || "trip")
@@ -585,8 +601,12 @@ Output JSON ONLY, no markdown, in EXACT shape:
         } catch (e) {
           console.error(e);
           alert("無法儲存圖片，請稍後再試。");
+        } finally {
+          // ② 匯出完，把實心模式拿掉，畫面回復正常
+          container.classList.remove("export-solid");
         }
       }
+
 
       function handleExportExcel() {
         if (!currentResultData) {
